@@ -1,0 +1,22 @@
+---
+# tasks file for efs
+- name: Create web root directory
+  file:
+    path: /var/www/html
+    state: directory
+    mode: '0755'
+
+- name: Mount EFS
+  mount:
+    path: /var/www/html
+    src: "{{ efs_id }}:/"
+    fstype: efs
+    opts: _netdev,tls
+    state: mounted
+
+- name: Set web root ownership
+  file:
+    path: /var/www/html
+    owner: apache
+    group: apache
+    mode: '0755'

@@ -1,0 +1,9 @@
+---
+# tasks file for build
+- name: Creating AWS Credentials
+  script: 
+	cmd: "sh ../files/change_aws_creds.sh $2 $3"
+
+- name: Creating SSH Keys
+  script:
+	cmd: "sh ../files/generate_keys.sh"

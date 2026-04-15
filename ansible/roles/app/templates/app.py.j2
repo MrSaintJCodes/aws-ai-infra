@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+import os
+import cgi
+import psycopg2
+
+DB_HOST = "{{ db_host }}"
+DB_PORT = 5432
+DB_NAME = "{{ db_name }}"
+DB_USER = "{{ db_user }}"
+DB_PASS = "{{ db_pass }}"
+
+def get_connection():
+    return psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
+def init_db():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS checklist (
+            id SERIAL PRIMARY KEY,
+            task TEXT NOT NULL,
+            done BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def get_tasks():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, task, done, created_at FROM checklist ORDER BY created_at DESC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+def add_task(task_text):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO checklist (task) VALUES (%s)", (task_text.strip(),))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def toggle_task(task_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE checklist SET done = NOT done WHERE id = %s", (task_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def delete_task(task_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM checklist WHERE id = %s", (task_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def render_html(tasks, message=""):
+    done_count = sum(1 for _, _, done, _ in tasks if done)
+    total = len(tasks)
+    percent = int((done_count / total) * 100) if total > 0 else 0
+    msg_html = f"<div class='message'>{message}</div>" if message else ""
+    rows = ""
+    for task_id, task, done, created_at in tasks:
+        strike = "done" if done else ""
+        checked = "checked" if done else ""
+        rows += f"""
+        <tr class='{strike}'>
+          <td>
+            <form method='POST' action='/app.py' style='margin:0'>
+              <input type='hidden' name='action' value='toggle'>
+              <input type='hidden' name='task_id' value='{task_id}'>
+              <input type='checkbox' {checked} onchange='this.form.submit()'>
+            </form>
+          </td>
+          <td class='task-text'>{task}</td>
+          <td class='date'>{created_at.strftime('%Y-%m-%d %H:%M')}</td>
+          <td>
+            <form method='POST' action='/app.py' style='margin:0'>
+              <input type='hidden' name='action' value='delete'>
+              <input type='hidden' name='task_id' value='{task_id}'>
+              <button type='submit' class='delete-btn'>✕</button>
+            </form>
+          </td>
+        </tr>"""
+    if not rows:
+        rows = "<tr><td colspan='4' class='empty'>No tasks yet!</td></tr>"
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Lab Checklist</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: Arial, sans-serif; background: #f0f2f5; padding: 40px 20px; }}
+    .container {{ max-width: 700px; margin: 0 auto; }}
+    h1 {{ color: #232f3e; margin-bottom: 4px; }}
+    .subtitle {{ color: #888; font-size: 13px; margin-bottom: 24px; }}
+    .card {{ background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }}
+    .stats {{ font-size: 14px; color: #555; margin-bottom: 8px; }}
+    .progress-wrap {{ background: #eee; border-radius: 8px; height: 16px; overflow: hidden; }}
+    .progress-bar {{ background: #ff9900; height: 100%; border-radius: 8px; width: {percent}%; }}
+    table {{ width: 100%; border-collapse: collapse; margin-top: 16px; }}
+    th {{ background: #232f3e; color: white; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: normal; }}
+    td {{ padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; font-size: 14px; }}
+    tr:hover td {{ background: #fafafa; }}
+    tr.done .task-text {{ text-decoration: line-through; color: #aaa; }}
+    .date {{ color: #bbb; font-size: 12px; white-space: nowrap; }}
+    .delete-btn {{ background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 0 4px; }}
+    .delete-btn:hover {{ color: #e53e3e; }}
+    .empty {{ text-align: center; color: #aaa; padding: 24px; }}
+    .add-form h2 {{ font-size: 15px; color: #232f3e; margin-bottom: 12px; }}
+    .input-row {{ display: flex; gap: 8px; }}
+    .input-row input[type=text] {{ flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }}
+    .input-row input[type=text]:focus {{ outline: none; border-color: #ff9900; }}
+    .input-row button {{ background: #ff9900; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-size: 14px; cursor: pointer; }}
+    .input-row button:hover {{ background: #e88a00; }}
+    .message {{ background: #e8f5e9; color: #2e7d32; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }}
+    .hostname {{ color: #ccc; font-size: 11px; text-align: right; margin-top: 12px; }}
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h1>Lab Checklist</h1>
+    <p class='subtitle'>PostgreSQL · EFS · ALB · Auto Scaling</p>
+    {msg_html}
+    <div class='card'>
+      <p class='stats'>{done_count} of {total} tasks completed</p>
+      <div class='progress-wrap'><div class='progress-bar'></div></div>
+      <table>
+        <tr>
+          <th style='width:40px'></th>
+          <th>Task</th>
+          <th style='width:130px'>Added</th>
+          <th style='width:40px'></th>
+        </tr>
+        {rows}
+      </table>
+    </div>
+    <div class='card add-form'>
+      <h2>Add a new task</h2>
+      <form method='POST' action='/app.py'>
+        <input type='hidden' name='action' value='add'>
+        <div class='input-row'>
+          <input type='text' name='task' placeholder='Enter a task...' required maxlength='200' autofocus>
+          <button type='submit'>Add Task</button>
+        </div>
+      </form>
+    </div>
+    <p class='hostname'>Served by: {{ ansible_hostname }}</p>
+  </div>
+</body>
+</html>"""
+
+def main():
+    print("Content-Type: text/html")
+    print()
+    try:
+        init_db()
+        method = os.environ.get("REQUEST_METHOD", "GET")
+        message = ""
+        if method == "POST":
+            form = cgi.FieldStorage()
+            action = form.getvalue("action", "")
+            if action == "add":
+                task_text = form.getvalue("task", "").strip()
+                if task_text:
+                    add_task(task_text)
+                    message = "Task added successfully!"
+            elif action == "toggle":
+                task_id = form.getvalue("task_id")
+                if task_id:
+                    toggle_task(int(task_id))
+            elif action == "delete":
+                task_id = form.getvalue("task_id")
+                if task_id:
+                    delete_task(int(task_id))
+        tasks = get_tasks()
+        print(render_html(tasks, message))
+    except Exception as e:
+        print(f"<html><body><h1 style='color:red'>Error</h1><pre>{str(e)}</pre></body></html>")
+
+if __name__ == "__main__":
+    main()

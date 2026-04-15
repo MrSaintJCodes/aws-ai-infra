@@ -1,0 +1,10 @@
+---
+# tasks file for app
+- name: Deploy checklist app
+  template:
+    src: app.py.j2
+    dest: /var/www/html/app.py
+    owner: apache
+    group: apache
+    mode: '0755'
+  notify: restart httpd

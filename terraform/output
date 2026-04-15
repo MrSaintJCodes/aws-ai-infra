@@ -1,0 +1,55 @@
+{
+    "RoleName": "lab-ec2-role",
+    "PolicyName": "lab-ec2-efs-policy",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "elasticfilesystem:ClientMount",
+                    "elasticfilesystem:ClientWrite",
+                    "elasticfilesystem:ClientRootAccess",
+                    "elasticfilesystem:DescribeFileSystems"
+                ],
+                "Effect": "Allow",
+                "Resource": "arn:aws:elasticfilesystem:us-east-1:985124894165:file-system/fs-008d3ebcb578267d3"
+            },
+            {
+                "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                ],
+                "Effect": "Allow",
+                "Resource": "arn:aws:secretsmanager:us-east-1:985124894165:secret:/lab/*"
+            },
+            {
+                "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                ],
+                "Effect": "Allow",
+                "Resource": [
+                    "arn:aws:secretsmanager:us-east-1:985124894165:secret:lab/db-credentials-mdgwRU",
+                    "arn:aws:secretsmanager:us-east-1:985124894165:secret:lab/*"
+                ]
+            },
+            {
+                "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                ],
+                "Effect": "Allow",
+                "Resource": "arn:aws:secretsmanager:us-east-1:985124894165:secret:lab/db-credentials-mdgwRU"
+            },
+            {
+                "Action": [
+                    "ssm:GetParameter",
+                    "ssm:GetParameters",
+                    "ssm:GetParametersByPath"
+                ],
+                "Effect": "Allow",
+                "Resource": "arn:aws:ssm:us-east-1:985124894165:parameter/lab/*"
+            }
+        ]
+    }
+}

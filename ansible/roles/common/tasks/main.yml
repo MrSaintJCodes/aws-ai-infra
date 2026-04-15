@@ -1,0 +1,21 @@
+---
+# tasks file for common
+- name: Update all packages
+  yum:
+    name: "*"
+    state: latest
+
+- name: Install base packages
+  yum:
+    name:
+      - python3
+      - python3-pip
+      - amazon-efs-utils
+      - amazon-cloudwatch-agent
+    state: present
+
+- name: Install Python packages
+  pip:
+    name:
+      - psycopg2-binary
+    executable: pip3

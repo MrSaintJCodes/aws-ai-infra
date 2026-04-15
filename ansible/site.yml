@@ -1,0 +1,10 @@
+- name: Configure web servers
+  hosts: all
+  become: true
+
+  roles:
+    - common
+    - efs
+    - httpd
+    - app
+    - cloudwatch

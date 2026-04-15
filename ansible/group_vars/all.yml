@@ -1,0 +1,7 @@
+efs_id: "{{ lookup('env', 'EFS_ID') }}"
+db_host: "{{ lookup('env', 'DB_HOST') }}"
+db_name: "{{ lookup('env', 'DB_NAME') }}"
+db_user: "{{ lookup('env', 'DB_USER') }}"
+db_pass: "{{ lookup('env', 'DB_PASS') }}"
+asg_name: "web-asg"
+aws_region: "us-east-1"

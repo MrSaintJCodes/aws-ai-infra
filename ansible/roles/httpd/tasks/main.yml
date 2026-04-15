@@ -1,0 +1,33 @@
+---
+# tasks file for httpd
+- name: Install Apache
+  yum:
+    name: httpd
+    state: present
+
+- name: Deploy Apache CGI config
+  copy:
+    dest: /etc/httpd/conf.d/checklist.conf
+    content: |
+      <VirtualHost *:80>
+          DocumentRoot /var/www/html
+          <Directory /var/www/html>
+              Options +ExecCGI
+              AddHandler cgi-script .py
+              AllowOverride None
+              Require all granted
+              DirectoryIndex app.py
+          </Directory>
+      </VirtualHost>
+  notify: restart httpd
+
+- name: Start and enable Apache
+  systemd:
+    name: httpd
+    state: started
+    enabled: true
+
+- name: restart httpd
+  systemd:
+    name: httpd
+    state: restarted
