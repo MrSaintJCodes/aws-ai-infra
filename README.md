@@ -4,6 +4,8 @@ A production-ready AI chat application built with **Django**, powered by **Ollam
 
 This project demonstrates full-stack development combined with cloud infrastructure, automation, and scalable architecture.
 
+<img width="978" height="1374" alt="Image" src="https://github.com/user-attachments/assets/2c94c0aa-ba4b-4095-a8ed-cf7940233aef" />
+
 ---
 
 ## 🚀 Features
